@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Optimizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom scroll-to-top button */
+        #scrollToTopBtn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99;
+            border: none;
+            outline: none;
+            background-color: #3b82f6;
+            color: white;
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 50%;
+            transition: opacity 0.3s ease;
+        }
+
+        .hero-bg-container {
+            position: relative;
+            min-height: 100vh;
+            background-color: #1e293b;
+            overflow: hidden;
+        }
+        
+        .hero-bg-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.5;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slideInUp {
+            animation: slideInUp 1s ease-out;
+        }
+        .text-income { color: #10b981; }
+        .text-expense { color: #ef4444; }
+
+        /* Multi-Page Views */
+        .page-view {
+            display: none;
+            min-height: calc(100vh - 80px); /* Account for nav/footer height */
+            padding-top: 80px;
+        }
+
+        .page-view.active {
+            display: block;
+        }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 60;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-backdrop.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-backdrop">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full transform transition-transform duration-300 scale-95 modal-content">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-2xl font-bold text-blue-600">Login / Get Started</h3>
+                <button onclick="closeLoginModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-6">Welcome to PFO. Log in or sign up to continue tracking your finances.</p>
+            <form class="space-y-4">
+                <input type="email" placeholder="Email Address" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                <input type="password" placeholder="Password" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-200">
+                    Log In (Demo)
+                </button>
+            </form>
+            <p class="text-center text-sm text-gray-500 mt-4">Demo: This is a placeholder login. Functionality is shown in the Tracker section.</p>
+        </div>
+    </div>
+    
+    <!-- Navigation Bar -->
+    <nav class="bg-transparent shadow-md sticky top-0 z-50 transition-all duration-300" id="navbar">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" onclick="showPage('home'); return false;" class="text-2xl font-extrabold text-white transition-colors duration-300" id="logo">
+                Personal Finance Optimizer
+            </a>
+            <div class="flex items-center space-x-6">
+                <a href="#about-us" onclick="showPage('home', true); return false;" class="text-white text-sm font-medium hover:text-blue-200 transition-colors duration-200">About Us</a>
+                <a href="#" onclick="showPage('core-features'); return false;" class="text-white text-sm font-medium hover:text-blue-200 transition-colors duration-200">Core Features</a>
+                <button onclick="showLoginModal()" class="text-sm font-medium bg-white text-blue-600 px-4 py-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                    Get Started (Login)
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- === APP CONTENT CONTAINER === -->
+    <div id="app-container">
+
+        <!-- ---------------------------------------------------- -->
+        <!-- 1. HOME VIEW (Default Page) -->
+        <!-- ---------------------------------------------------- -->
+        <div id="page-home" class="page-view active">
+            <!-- Hero Section -->
+            <section id="hero" class="hero-bg-container text-white flex items-center justify-center py-24 md:py-32">
+                <canvas id="hero-canvas"></canvas>
+                <div class="hero-content container mx-auto px-6 text-center">
+                    <h1 class="text-4xl md:text-6xl font-extrabold mb-4 animate-fadeIn">
+                        Personal Finance Optimizer
+                    </h1>
+                    <p class="text-lg md:text-xl font-light max-w-3xl mx-auto opacity-90 animate-slideInUp delay-300">
+                        Effortlessly manage your money with intelligent forecasting, personalized insights, and actionable advice.
+                    </p>
+                    <div class="mt-8 animate-slideInUp delay-500">
+                        <a href="#" onclick="showPage('core-features'); return false;" class="bg-white text-blue-600 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-200">
+                            Discover Features
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Section (Content from old #about) -->
+            <section id="about-us" class="py-16 md:py-24">
+                <div class="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+                    <div class="animate-fadeIn animate-slideInUp">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                            The Smart Way to Manage Your Money
+                        </h2>
+                        <p class="text-gray-600 text-lg mb-6">
+                            Our platform goes beyond simple expense tracking. It's a proactive partner that analyzes your spending,
+                            predicts future financial needs, and provides actionable recommendations in real-time.
+                        </p>
+                        <ul class="space-y-4 text-gray-700">
+                            <li><strong class="text-blue-600">Proactive Forecasting:</strong> Predicts future expenses to prevent overspending.</li>
+                            <li><strong class="text-blue-600">Personalized Insights:</strong> Delivers tailored advice based on your habits.</li>
+                            <li><strong class="text-blue-600">Goal-Oriented Planning:</strong> Helps you set and achieve your savings goals.</li>
+                        </ul>
+                    </div>
+                    <div class="hidden md:block">
+                        <img src="https://placehold.co/600x400/2563eb/ffffff?text=PFO+App+Interface" alt="Dashboard Mockup" class="rounded-2xl shadow-xl transform hover:scale-105 transition-transform duration-300">
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- 2. CORE FEATURES HUB VIEW -->
+        <!-- ---------------------------------------------------- -->
+        <div id="page-core-features" class="page-view bg-blue-50 py-16 md:py-24">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">PFO Core Feature Modules</h2>
+                <p class="text-gray-600 text-lg max-w-2xl mx-auto mb-12">
+                    Click any module to see the operational page demo.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Feature Card 1 -->
+                    <a href="#" onclick="showPage('feature-1'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">1. Expense Categorization</h3>
+                        <p class="text-gray-600">Automatic tagging and visual analysis of spending habits.</p>
+                    </a>
+                    <!-- Feature Card 2 -->
+                    <a href="#" onclick="showPage('feature-2'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">2. Budget Optimization</h3>
+                        <p class="text-gray-600">Smart recommendations to adjust spending limits.</p>
+                    </a>
+                    <!-- Feature Card 3 -->
+                    <a href="#" onclick="showPage('feature-3'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">3. Debt Repayment Strategies</h3>
+                        <p class="text-gray-600">Avalanche and Snowball method planning tools.</p>
+                    </a>
+                    <!-- Feature Card 4 -->
+                    <a href="#" onclick="showPage('feature-4'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">4. Savings Goal Tracking</h3>
+                        <p class="text-gray-600">Visual progress tracking for multiple savings targets.</p>
+                    </a>
+                    <!-- Feature Card 5 -->
+                    <a href="#" onclick="showPage('feature-5'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">5. Real-time Insights</h3>
+                        <p class="text-gray-600">Instant alerts and habit-building nudges (AI driven).</p>
+                    </a>
+                    <!-- Feature Card 6 -->
+                    <a href="#" onclick="showPage('feature-6'); return false;" class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 block">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">6. Intelligent Forecasting (ML)</h3>
+                        <p class="text-gray-600">Predictive analysis using ARIMA/Prophet models (Demo below).</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ---------------------------------------------------- -->
+        <!-- 3. FEATURE DETAIL PAGES (1-5 are simple demos) -->
+        <!-- ---------------------------------------------------- -->
+        
+        <div id="page-feature-1" class="page-view py-16 md:py-24">
+             <div class="container mx-auto px-6">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center">1. Expense Categorization Demo</h2>
+                <p class="text-lg text-gray-600 text-center max-w-3xl mx-auto mb-8">This page demonstrates the core functionality of logging transactions and auto-categorization. In the full PFO app, the input below would be automatically categorized (e.g., via transaction metadata) and summarized in charts.</p>
+                <!-- Reuse the Firestore Tracker as the main demo for this page -->
+                <div class="bg-white p-8 rounded-2xl shadow-xl">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Live Transaction Tracker (PFO Data Input)</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Transaction Logging Form -->
+                        <div class="lg:col-span-1">
+                            <h4 class="text-lg font-semibold mb-4 text-gray-800">Log New Transaction</h4>
+                            <form id="transactionForm-F1" class="space-y-4">
+                                <p class="text-xs text-gray-500">Your transactions are saved in Firestore under ID: <span id="userIdDisplayF1" class="font-mono text-gray-700">Loading...</span></p>
+                                <!-- Form inputs remain the same as the original tracker -->
+                                <div><label for="type-f1" class="block text-sm font-medium text-gray-700">Type</label><select id="type-f1" class="w-full px-4 py-2 rounded-lg border" required><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
+                                <div><label for="description-f1" class="block text-sm font-medium text-gray-700">Description</label><input type="text" id="description-f1" placeholder="e.g., Lunch" class="w-full px-4 py-2 rounded-lg border" required></div>
+                                <div><label for="category-f1" class="block text-sm font-medium text-gray-700">Category</label><input type="text" id="category-f1" placeholder="e.g., Food, Travel" class="w-full px-4 py-2 rounded-lg border" required></div>
+                                <div><label for="amount-f1" class="block text-sm font-medium text-gray-700">Amount (₹)</label><input type="number" id="amount-f1" placeholder="e.g., 500" class="w-full px-4 py-2 rounded-lg border" required></div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Add Transaction</button>
+                            </form>
+                        </div>
+                        <!-- Summary and Table -->
+                        <div class="lg:col-span-2">
+                             <h4 class="text-lg font-semibold mb-2 text-gray-800">Real-time Data and Categorization</h4>
+                            <div class="bg-gray-50 p-6 rounded-xl shadow-inner mb-4">
+                                <div class="flex flex-wrap justify-between text-base font-bold">
+                                    <p class="text-gray-700">Total Income: <span id="totalIncomeF1" class="text-income">₹0</span></p>
+                                    <p class="text-gray-700">Total Expenses: <span id="totalExpensesF1" class="text-expense">₹0</span></p>
+                                    <p class="text-gray-700">Net Balance: <span id="netBalanceF1">₹0</span></p>
+                                </div>
+                            </div>
+                            <div id="loadingDataF1" class="text-center py-4"><svg class="animate-spin h-5 w-5 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="text-gray-500 mt-1">Loading...</p></div>
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <tbody id="transactionsBodyF1" class="bg-white divide-y divide-gray-200"></tbody>
+                                </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-feature-2" class="page-view py-16 md:py-24 bg-gray-100">
+            <div class="container mx-auto px-6 text-center">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">2. Budget Optimization Demo</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">This page simulates setting smart budgets. In a real application, PFO uses ML to recommend optimal spending caps based on your income volatility and savings goals.</p>
+                <img src="https://placehold.co/800x400/3b82f6/ffffff?text=Visual+Budget+Allocation+%26+Optimization" alt="Budget Optimization Mockup" class="rounded-2xl shadow-xl mx-auto mb-8">
+                <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl mx-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-blue-600">Simulate Optimization</h3>
+                    <p class="text-gray-600 mb-4">Goal: Save ₹50,000 in 6 months. Current discretionary spend: ₹15,000/month.</p>
+                    <button class="bg-green-600 text-white font-bold py-3 px-6 rounded-full hover:bg-green-700 transition-colors duration-200">
+                        Run Optimization
+                    </button>
+                    <p class="text-lg font-semibold text-green-700 mt-4">Result: Recommended to lower 'Dining Out' by 15% (₹1,500/month) to hit target early.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-feature-3" class="page-view py-16 md:py-24">
+            <div class="container mx-auto px-6 text-center">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">3. Debt Repayment Strategies Demo</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">PFO visualizes and optimizes your debt repayment using two proven methods: Avalanche (High Interest First) and Snowball (Smallest Balance First).</p>
+                <img src="https://placehold.co/800x400/ef4444/ffffff?text=Debt+Repayment+Visualization" alt="Debt Repayment Mockup" class="rounded-2xl shadow-xl mx-auto mb-8">
+                <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl mx-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-red-600">Strategy Comparison</h3>
+                    <ul class="space-y-3 text-left">
+                        <li class="border-b pb-2"><strong class="font-bold">Debt Avalanche:</strong> Total Savings: ₹12,500. Payoff Time: 48 Months. (Focus on math)</li>
+                        <li class="border-b pb-2"><strong class="font-bold">Debt Snowball:</strong> Total Savings: ₹8,900. Payoff Time: 52 Months. (Focus on motivation)</li>
+                        <li class="pt-2"><p class="text-blue-700 font-semibold">PFO Recommendation: Debt Avalanche for maximum long-term interest savings.</p></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-feature-4" class="page-view py-16 md:py-24 bg-gray-100">
+            <div class="container mx-auto px-6 text-center">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">4. Savings Goal Tracking Demo</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">Track progress toward short-term and long-term goals with clear visualizations and automated transfers.</p>
+                <img src="https://placehold.co/800x400/10b981/ffffff?text=Multiple+Savings+Goals+Tracker" alt="Savings Tracker Mockup" class="rounded-2xl shadow-xl mx-auto mb-8">
+                <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl mx-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-green-600">Goal Progress Simulation</h3>
+                    <div class="space-y-4">
+                        <div class="border p-4 rounded-lg">
+                            <p class="font-semibold">Goal: New Laptop (₹60,000)</p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 my-2">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 75%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600">Current: ₹45,000 / Target Date: 2 Months</p>
+                        </div>
+                        <div class="border p-4 rounded-lg">
+                            <p class="font-semibold">Goal: Emergency Fund (₹1,50,000)</p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 my-2">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 40%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600">Current: ₹60,000 / Target Date: 9 Months</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-feature-5" class="page-view py-16 md:py-24">
+            <div class="container mx-auto px-6 text-center">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">5. Real-time Insights Demo</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">PFO delivers instant, personalized nudges and alerts based on observed financial behavior.</p>
+                <img src="https://placehold.co/800x400/f59e0b/ffffff?text=Insight+Nudge+Notifications" alt="Insights Mockup" class="rounded-2xl shadow-xl mx-auto mb-8">
+                <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl mx-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-yellow-600">Simulated Notifications</h3>
+                    <ul class="space-y-3 text-left">
+                        <li class="border p-3 rounded-lg bg-yellow-50"><strong class="font-bold">Alert:</strong> You are 20% over budget on 'Dining Out' this week. Try cooking dinner tonight!</li>
+                        <li class="border p-3 rounded-lg bg-green-50"><strong class="font-bold">Nudge:</strong> Great work! Your savings streak is 7 days. Would you like to auto-transfer ₹500?</li>
+                        <li class="border p-3 rounded-lg bg-red-50"><strong class="font-bold">Warning:</strong> Your forecasted balance in 10 days is ₹500 below your planned rent payment. Adjust required.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- 4. INTELLIGENT FORECASTING (CSV/AI Advisor) VIEW -->
+        <!-- ---------------------------------------------------- -->
+        <div id="page-feature-6" class="page-view py-16 md:py-24 bg-gray-100">
+            <div class="container mx-auto px-6 text-center">
+                <!-- Back Button -->
+                <div class="mb-8">
+                    <button onclick="showPage('core-features');" class="flex items-center text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Features
+                    </button>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">6. Intelligent Forecasting & Optimization (ML/AI)</h2>
+                <p class="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+                    Demonstrate the core capability: input historical data (CSV upload) to run predictive models (Prophet/ARIMA) and generate an AI plan.
+                </p>
+
+                <form id="forecastingForm" class="bg-white p-8 rounded-2xl shadow-xl max-w-3xl mx-auto">
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-2 text-gray-800">1. Data Input Method</h3>
+                        <label for="csv-upload" class="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-400 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 014 4.903M12 15V3m0 12l-4-4m4 4l4-4"></path></svg>
+                                <p class="text-sm text-blue-600 font-medium mt-2">Click to upload Transaction CSV (Simulated)</p>
+                                <p class="text-xs text-blue-400">Date, Amount, Type, Category</p>
+                            </div>
+                            <input type="file" id="csv-upload" class="hidden" accept=".csv" />
+                        </label>
+                        <p id="fileStatus" class="text-sm mt-2 text-center text-gray-500">No file selected.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-6">
+                        <div class="space-y-2">
+                            <label for="monthly-income-f6" class="block text-sm font-medium text-gray-700">Projected Monthly Income (₹)</label>
+                            <input type="number" id="monthly-income-f6" placeholder="25000" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="debt-amount-f6" class="block text-sm font-medium text-gray-700">Total Outstanding Debt (₹)</label>
+                            <input type="number" id="debt-amount-f6" placeholder="100000" class="w-full px-4 py-3 rounded-lg border border-gray-300">
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mb-2 mt-8 text-gray-800">2. Run Optimization</h3>
+                    <button type="submit" id="forecasting-button" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-700 transition-colors duration-200">
+                        Generate ML Forecast & AI Plan
+                    </button>
+                </form>
+
+                <!-- Result Display Area -->
+                <div id="forecastingResult" class="mt-8 text-left bg-white p-8 rounded-2xl shadow-xl hidden max-w-3xl mx-auto">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">PFO Forecast & AI Recommendation</h3>
+                    <p class="text-blue-600 font-semibold mb-4">ML Prediction: Based on historical data, we forecast an 18% increase in food expenses over the next 3 months.</p>
+                    <div id="forecastingContent" class="prose max-w-none text-gray-700">
+                        <!-- AI generated content will be placed here -->
+                    </div>
+                </div>
+                
+                <div id="loadingIndicatorF6" class="mt-8 text-center hidden">
+                    <div class="flex items-center justify-center">
+                        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Running ML models and generating plan...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------------------------------------------- -->
+        <!-- 5. FOOTER & CONTACT -->
+        <!-- ---------------------------------------------------- -->
+        <div id="page-contact" class="page-view py-16 md:py-24 bg-blue-600 text-white">
+             <!-- Call to Action Section (Existing) -->
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Take Control of Your Finances?</h2>
+                <p class="text-lg md:text-xl font-light max-w-2xl mx-auto mb-8">
+                    Join our waitlist to be among the first to experience the Personal Finance Optimizer.
+                </p>
+                <form id="contactForm" class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
+                    <input type="email" id="emailInput" placeholder="Enter your email address" class="w-full md:w-80 px-4 py-3 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors duration-200" required>
+                    <button type="submit" class="w-full md:w-auto bg-white text-blue-600 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-200">
+                        Join the Waitlist
+                    </button>
+                </form>
+                <div id="messageBox" class="mt-4 text-center hidden">
+                    <p id="messageText" class="text-sm font-medium"></p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="bg-gray-900 text-gray-300 py-6 mt-12 w-full">
+                <div class="container mx-auto px-6 flex flex-col items-center">
+                    <div class="flex space-x-6 mb-3">
+                        <a href="#" onclick="showPage('home'); return false;" class="hover:text-white transition-colors duration-200">Home</a>
+                        <a href="#" onclick="showPage('core-features'); return false;" class="hover:text-white transition-colors duration-200">Features</a>
+                        <a href="#about-us" onclick="showPage('home', true); return false;" class="hover:text-white transition-colors duration-200">About</a>
+                    </div>
+                    <p class="text-sm">&copy; 2024 Personal Finance Optimizer. All rights reserved.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scroll-to-top Button (Existing) -->
+    <button onclick="scrollToTop()" id="scrollToTopBtn" title="Go to top">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+        </svg>
+    </button>
+
+    <script type="module">
+        // === FIREBASE IMPORTS ===
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // === GLOBAL FIREBASE VARIABLES ===
+        let db;
+        let auth;
+        let currentUserId = null;
+        
+        // --- Initialization ---
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        let transactionsCollectionRef = null; 
+
+        // DOM elements for Firestore Tracker (F1)
+        let transactionsBodyF1, noTransactionsRowF1, loadingDataF1, totalIncomeF1, totalExpensesF1, netBalanceF1, userIdDisplayF1;
+
+        /**
+         * Initializes Firebase and authenticates the user.
+         */
+        async function initializeFirebase() {
+            try {
+                setLogLevel('Debug'); 
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                await setPersistence(auth, browserSessionPersistence);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                currentUserId = auth.currentUser.uid;
+                
+                // Define collection reference once
+                transactionsCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/transactions`);
+
+                // Start the core application features after successful authentication
+                startApp(currentUserId);
+
+            } catch (error) {
+                console.error("Firebase Initialization or Auth Error:", error);
+                // Fallback for user display if auth fails
+                const errorMsg = `ERROR: ${error.code}`;
+                if(userIdDisplayF1) userIdDisplayF1.textContent = errorMsg;
+                const loadingDataEl = document.getElementById('loadingDataF1');
+                if (loadingDataEl) {
+                    loadingDataEl.innerHTML = `<p class="text-red-500">Authentication failed. Check console for details.</p>`;
+                }
+            }
+        }
+
+        /**
+         * Core application logic started after successful Firebase authentication.
+         * Queries DOM elements once and sets up the real-time listener.
+         * @param {string} userId The authenticated user's UID.
+         */
+        function startApp(userId) {
+            
+            // --- Query DOM elements for Feature 1 (Transaction Tracker) ---
+            userIdDisplayF1 = document.getElementById('userIdDisplayF1');
+            transactionsBodyF1 = document.getElementById('transactionsBodyF1');
+            noTransactionsRowF1 = document.getElementById('noTransactionsF1');
+            loadingDataF1 = document.getElementById('loadingDataF1');
+            totalIncomeF1 = document.getElementById('totalIncomeF1');
+            totalExpensesF1 = document.getElementById('totalExpensesF1');
+            netBalanceF1 = document.getElementById('netBalanceF1');
+
+            // Defensive check
+            if (!transactionsBodyF1 || !userIdDisplayF1) {
+                console.error("Critical DOM element(s) missing for Feature 1. Stopping tracker features.");
+                return; 
+            }
+            
+            userIdDisplayF1.textContent = userId;
+
+            // --- Real-time Data Listener (onSnapshot) ---
+            
+            onSnapshot(transactionsCollectionRef, (snapshot) => {
+                const transactions = [];
+                snapshot.forEach(doc => {
+                    transactions.push({ id: doc.id, ...doc.data() });
+                });
+                renderTransactions(transactions); 
+            }, (error) => {
+                console.error("Error reading real-time transactions:", error);
+                if(loadingDataF1) loadingDataF1.innerHTML = `<p class="text-red-500">Failed to load data. Check console.</p>`;
+            });
+
+            // --- Add Transaction Function (addDoc) ---
+            
+            document.getElementById('transactionForm-F1').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                
+                const type = document.getElementById('type-f1').value;
+                const description = document.getElementById('description-f1').value.trim();
+                const category = document.getElementById('category-f1').value.trim();
+                const amount = document.getElementById('amount-f1').value;
+                
+                if (!description || !category || !amount || parseFloat(amount) <= 0) {
+                    console.error("Invalid transaction details.");
+                    return;
+                }
+
+                const newTransaction = {
+                    type: type,
+                    description: description,
+                    category: category,
+                    amount: parseFloat(amount),
+                    date: new Date().toISOString()
+                };
+
+                try {
+                    await addDoc(transactionsCollectionRef, newTransaction);
+                    this.reset();
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                }
+            });
+        }
+        
+        /**
+         * Renders the transaction list and updates the summary.
+         * @param {Array<Object>} transactions Array of transaction objects from Firestore.
+         */
+        function renderTransactions(transactions) {
+            
+            if(loadingDataF1) loadingDataF1.classList.add('hidden');
+            if(transactionsBodyF1) transactionsBodyF1.innerHTML = '';
+
+            let totalIncome = 0;
+            let totalExpenses = 0;
+
+            if (transactions.length === 0) {
+                // NOTE: noTransactionsRowF1 is not present in the HTML structure, so we safely skip checking it.
+                // We rely on clearing transactionsBodyF1 to show nothing if the list is empty.
+            } else {
+                
+                transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                transactions.forEach(t => {
+                    const isExpense = t.type === 'Expense';
+                    const amount = parseFloat(t.amount);
+                    
+                    if (isExpense) {
+                        totalExpenses += amount;
+                    } else {
+                        totalIncome += amount;
+                    }
+
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-3 py-3 whitespace-nowrap text-sm font-medium ${isExpense ? 'text-expense' : 'text-income'}">${t.type}</td>
+                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">${t.description}</td>
+                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">${t.category}</td>
+                        <td class="px-3 py-3 whitespace-nowrap text-sm font-semibold ${isExpense ? 'text-expense' : 'text-income'}">
+                            ${isExpense ? '- ' : '+ '}₹${amount.toLocaleString('en-IN')}
+                        </td>
+                        <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-400">${new Date(t.date).toLocaleDateString('en-IN')}</td>
+                    `;
+                    if(transactionsBodyF1) transactionsBodyF1.appendChild(row);
+                });
+            }
+            
+            // Update Summary
+            const netBalance = totalIncome - totalExpenses;
+            if(totalIncomeF1) totalIncomeF1.textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
+            if(totalExpensesF1) totalExpensesF1.textContent = `₹${totalExpenses.toLocaleString('en-IN')}`;
+            if(netBalanceF1) {
+                netBalanceF1.textContent = `₹${netBalance.toLocaleString('en-IN')}`;
+                netBalanceF1.className = netBalance >= 0 ? 'text-income' : 'text-expense';
+            }
+        }
+
+
+        // === UI Routing Logic ===
+        
+        const views = [
+            'page-home', 'page-core-features', 'page-feature-1', 
+            'page-feature-2', 'page-feature-3', 'page-feature-4', 
+            'page-feature-5', 'page-feature-6', 'page-contact'
+        ];
+
+        /**
+         * Switches the visible page view.
+         * @param {string} pageId The ID of the page to show (e.g., 'home', 'feature-6').
+         * @param {boolean} [doScroll=false] If true, scrolls to the 'about-us' section on the home page.
+         */
+        function showPage(pageId, doScroll = false) {
+            views.forEach(id => {
+                const page = document.getElementById(id);
+                if (page) {
+                    if (id === 'page-' + pageId) {
+                        page.classList.add('active');
+                    } else {
+                        page.classList.remove('active');
+                    }
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'instant' }); // Scroll to top instantly on page change
+            
+            if (pageId === 'home' && doScroll) {
+                setTimeout(() => {
+                    document.getElementById('about-us').scrollIntoView({ behavior: 'smooth' });
+                }, 50); // Small delay for view transition
+            }
+        }
+
+        // Set default page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+            showPage('home');
+        });
+        
+        // === Modal Logic ===
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        window.showLoginModal = showLoginModal;
+        window.closeLoginModal = closeLoginModal;
+        window.showPage = showPage; // Expose to global scope for onclick attributes
+
+
+        // === Contact Form (Existing) ===
+        document.getElementById('contactForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('emailInput');
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('animate-in', 'fade-in');
+
+            // Simulate a successful submission
+            messageText.textContent = `Thanks for joining! We'll notify you at ${emailInput.value} when we launch.`;
+            messageText.classList.remove('text-red-500');
+            messageText.classList.add('text-green-500');
+
+            emailInput.value = '';
+        });
+        
+        // === Intelligent Forecasting Logic (F6) ===
+
+        // CSV Upload Simulation Logic
+        document.getElementById('csv-upload').addEventListener('change', function() {
+            const fileStatus = document.getElementById('fileStatus');
+            if (this.files.length > 0) {
+                fileStatus.textContent = `File loaded: ${this.files[0].name}. Ready for forecasting.`;
+                fileStatus.classList.remove('text-gray-500');
+                fileStatus.classList.add('text-green-600');
+            } else {
+                fileStatus.textContent = "No file selected.";
+                fileStatus.classList.remove('text-green-600');
+                fileStatus.classList.add('text-gray-500');
+            }
+        });
+
+        // AI Advisor Logic (F6 - Modified for Forecasting Context)
+        document.getElementById('forecastingForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const income = document.getElementById('monthly-income-f6').value;
+            // Note: Expenses are assumed to be loaded/calculated from the CSV data
+            const debt = document.getElementById('debt-amount-f6').value || 0;
+            const forecastingContent = document.getElementById('forecastingContent');
+            const forecastingResult = document.getElementById('forecastingResult');
+            const loadingIndicator = document.getElementById('loadingIndicatorF6');
+            const fileStatusText = document.getElementById('fileStatus').textContent;
+
+            forecastingResult.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+
+            // Simulate parsing expenses from CSV (Placeholder Logic)
+            const assumedMonthlyExpense = 19500; 
+            
+            const prompt = `You are an encouraging and knowledgeable financial advisor for students, specialized in irregular income and forecasting.
+            A user has provided their data (simulated CSV upload) and current projections:
+            - Projected Monthly Income: ₹${income}
+            - Assumed Monthly Expenses (from past data): ₹${assumedMonthlyExpense}
+            - Total Debt: ₹${debt}
+            - ML Forecast Insight: The system predicts an 18% increase in food expenses over the next 3 months due to past trends.
+            
+            Based on this information, provide a personalized and actionable financial plan. Start with a friendly, positive greeting.
+            The plan should be structured with headings for "ML-Driven Forecast Summary," "Budgeting Adjustments," "Proactive Debt Plan," and "Next Steps."
+            Use strong emphasis on the ML prediction. Use markdown for headings and bullet points. Do not include a conversational closing.`;
+
+            try {
+                // --- Start of Simulated Python Backend Call ---
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const MAX_RETRIES = 5;
+                let retries = 0;
+                let response;
+
+                while (retries < MAX_RETRIES) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.status !== 429) {
+                            break;
+                        }
+                    } catch (e) {
+                        console.warn(`Attempt ${retries + 1} failed, retrying...`);
+                    }
+                    retries++;
+                    await new Promise(res => setTimeout(res, Math.pow(2, retries) * 1000));
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // --- End of Simulated Python Backend Call ---
+
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    // Format markdown to HTML
+                    const htmlContent = text
+                        .replace(/###\s(.*?)\n/g, '<h4 class="text-xl font-semibold mt-4 mb-2 text-blue-600">$1</h4>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/^- (.*)/gm, '<li>$1</li>')
+                        .replace(/(<li>.*<\/li>)/gs, '<ul class="list-disc list-inside space-y-2">$1</ul>')
+                        .replace(/\n/g, '<br>');
+                    
+                    forecastingContent.innerHTML = htmlContent;
+                } else {
+                    forecastingContent.innerHTML = '<p class="text-red-500">Sorry, something went wrong. Please try again.</p>';
+                }
+            } catch (error) {
+                console.error("Error generating advice:", error);
+                forecastingContent.innerHTML = '<p class="text-red-500">An error occurred while fetching the advice. Please check your internet connection and try again.</p>';
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                forecastingResult.classList.remove('hidden');
+            }
+        });
+
+
+        // === Animated Background Script (Existing) ===
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('hero-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+
+            const resizeCanvas = () => {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            };
+            
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            const bubbles = [];
+            const bubbleCount = 50;
+
+            const colors = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#6366f1', '#a855f7'];
+
+            function createBubble() {
+                const size = Math.random() * 20 + 5;
+                const x = Math.random() * width;
+                const y = height + size;
+                const speedX = (Math.random() - 0.5) * 0.5;
+                const speedY = -Math.random() * 1.5;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                bubbles.push({ x, y, size, speedX, speedY, color });
+            }
+
+            function updateBubbles() {
+                for (let i = bubbles.length - 1; i >= 0; i--) {
+                    const bubble = bubbles[i];
+                    bubble.x += bubble.speedX;
+                    bubble.y += bubble.speedY;
+
+                    if (bubble.y < -bubble.size) {
+                        bubbles.splice(i, 1);
+                        createBubble();
+                    }
+                }
+            }
+
+            function drawBubbles() {
+                ctx.clearRect(0, 0, width, height);
+                bubbles.forEach(bubble => {
+                    ctx.beginPath();
+                    ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
+                    ctx.fillStyle = bubble.color;
+                    ctx.fill();
+                    ctx.closePath();
+                });
+            }
+
+            function animate() {
+                updateBubbles();
+                drawBubbles();
+                requestAnimationFrame(animate);
+            }
+
+            for (let i = 0; i < bubbleCount; i++) {
+                createBubble();
+            }
+
+            animate();
+        });
+
+
+        // === Global Utility Functions (Existing) ===
+
+        // Scroll-to-top button logic
+        var scrollToTopBtn = document.getElementById("scrollToTopBtn");
+        window.onscroll = function() {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                scrollToTopBtn.style.display = "block";
+            } else {
+                scrollToTopBtn.style.display = "none";
+            }
+        };
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        window.scrollToTop = scrollToTop;
+        
+        // Change navbar style on scroll
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            const logo = document.getElementById('logo');
+            // Adjust styles based on scroll position
+            if (window.scrollY > 50) {
+                navbar.classList.remove('bg-transparent', 'shadow-md');
+                navbar.classList.add('bg-white', 'shadow-lg');
+                logo.classList.remove('text-white');
+                logo.classList.add('text-blue-600');
+                // Target all links that are not the button (simpler link targeting due to new routing)
+                document.querySelectorAll('#navbar a:not(button), #navbar a:not(.bg-white)').forEach(link => {
+                     // Check if the link is visible and part of the main navigation (A hacky way to prevent targeting buttons by mistake)
+                    if (link.href && link.href.includes('#')) {
+                        link.classList.remove('text-white', 'hover:text-blue-200');
+                        link.classList.add('text-gray-800', 'hover:text-blue-600');
+                    }
+                });
+            } else {
+                navbar.classList.remove('bg-white', 'shadow-lg');
+                navbar.classList.add('bg-transparent', 'shadow-md');
+                logo.classList.remove('text-blue-600');
+                logo.classList.add('text-white');
+                document.querySelectorAll('#navbar a:not(button), #navbar a:not(.bg-white)').forEach(link => {
+                     if (link.href && link.href.includes('#')) {
+                        link.classList.remove('text-gray-800', 'hover:text-blue-600');
+                        link.classList.add('text-white', 'hover:text-blue-200');
+                     }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
